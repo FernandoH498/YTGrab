@@ -1,6 +1,8 @@
 import os
 import uuid
+import threading
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -13,9 +15,18 @@ from downloader import validate_youtube_url, get_video_info, download_video
 TEMP_DIR = Path("temp")
 TEMP_DIR.mkdir(exist_ok=True)
 
-app = FastAPI()
 executor = ThreadPoolExecutor(max_workers=4)
 jobs: dict = {}
+jobs_lock = threading.Lock()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    executor.shutdown(wait=False)
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 class VideoInfoRequest(BaseModel):
@@ -44,8 +55,9 @@ def api_download(req: DownloadRequest):
     if req.format not in ("mp4", "mp3"):
         raise HTTPException(status_code=400, detail="Formato inválido. Use 'mp4' ou 'mp3'.")
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {"status": "queued", "progress": 0, "filepath": None, "error": None}
-    executor.submit(download_video, req.url, job_id, req.format, str(TEMP_DIR), jobs)
+    with jobs_lock:
+        jobs[job_id] = {"status": "queued", "progress": 0, "filepath": None, "error": None}
+    executor.submit(download_video, req.url, job_id, req.format, str(TEMP_DIR), jobs, jobs_lock)
     return {"job_id": job_id}
 
 
@@ -69,7 +81,8 @@ def api_file(job_id: str, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=404, detail="Arquivo não encontrado no servidor")
 
     def cleanup():
-        jobs.pop(job_id, None)
+        with jobs_lock:
+            jobs.pop(job_id, None)
         if os.path.exists(filepath):
             os.remove(filepath)
 

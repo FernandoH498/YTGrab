@@ -3,6 +3,8 @@ import json
 import subprocess
 import glob
 import os
+import contextlib
+import threading
 
 YOUTUBE_REGEX = re.compile(
     r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)[\w-]+"
@@ -41,8 +43,9 @@ def get_video_info(url: str) -> dict:
     }
 
 
-def download_video(url: str, job_id: str, fmt: str, temp_dir: str, jobs: dict) -> None:
+def download_video(url: str, job_id: str, fmt: str, temp_dir: str, jobs: dict, lock: "threading.Lock | None" = None) -> None:
     """Download a YouTube video/audio using yt-dlp, tracking progress in the jobs dict."""
+    _lock = lock or contextlib.nullcontext()
     out_template = os.path.join(temp_dir, f"{job_id}.%(ext)s")
 
     if fmt == "mp3":
@@ -59,7 +62,8 @@ def download_video(url: str, job_id: str, fmt: str, temp_dir: str, jobs: dict) -
             "-o", out_template, url,
         ]
 
-    jobs[job_id] = {"status": "downloading", "progress": 0, "filepath": None, "error": None}
+    with _lock:
+        jobs[job_id]["status"] = "downloading"
 
     try:
         proc = subprocess.Popen(
@@ -68,25 +72,30 @@ def download_video(url: str, job_id: str, fmt: str, temp_dir: str, jobs: dict) -
         for line in proc.stdout:
             progress = parse_progress_line(line)
             if progress is not None:
-                jobs[job_id]["progress"] = progress
+                with _lock:
+                    jobs[job_id]["progress"] = progress
         proc.wait()
 
         if proc.returncode != 0:
-            jobs[job_id]["status"] = "error"
-            jobs[job_id]["error"] = "Download failed. The video may be unavailable or private."
+            with _lock:
+                jobs[job_id]["status"] = "error"
+                jobs[job_id]["error"] = "Download failed. The video may be unavailable or private."
             return
 
         pattern = os.path.join(temp_dir, f"{job_id}.*")
         files = [f for f in glob.glob(pattern) if not f.endswith(".part")]
         if not files:
-            jobs[job_id]["status"] = "error"
-            jobs[job_id]["error"] = "Output file not found after download."
+            with _lock:
+                jobs[job_id]["status"] = "error"
+                jobs[job_id]["error"] = "Output file not found after download."
             return
 
-        jobs[job_id]["filepath"] = files[0]
-        jobs[job_id]["progress"] = 100
-        jobs[job_id]["status"] = "done"
+        with _lock:
+            jobs[job_id]["filepath"] = files[0]
+            jobs[job_id]["progress"] = 100
+            jobs[job_id]["status"] = "done"
 
     except Exception as e:
-        jobs[job_id]["status"] = "error"
-        jobs[job_id]["error"] = str(e)
+        with _lock:
+            jobs[job_id]["status"] = "error"
+            jobs[job_id]["error"] = str(e)

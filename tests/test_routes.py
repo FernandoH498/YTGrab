@@ -112,6 +112,8 @@ def test_file_streams_and_schedules_cleanup(tmp_path):
     response = client.get("/api/file/done-job")
     assert response.status_code == 200
     assert response.content == b"fake video content"
+    assert "done-job" not in main.jobs
+    assert not fake_file.exists()
 
 
 def test_file_returns_404_when_file_missing_from_disk(tmp_path):

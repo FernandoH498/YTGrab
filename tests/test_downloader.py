@@ -84,7 +84,7 @@ def _make_mock_proc(stdout_lines: list[str], returncode: int = 0):
 
 
 def test_download_video_sets_status_done_on_success(tmp_path):
-    jobs = {}
+    jobs = {"test-job": {"status": "queued", "progress": 0, "filepath": None, "error": None}}
     lines = [
         "[download]  50.0% of 10.00MiB\n",
         "[download] 100% of 10.00MiB\n",
@@ -100,7 +100,7 @@ def test_download_video_sets_status_done_on_success(tmp_path):
 
 
 def test_download_video_sets_status_error_on_nonzero_returncode(tmp_path):
-    jobs = {}
+    jobs = {"err-job": {"status": "queued", "progress": 0, "filepath": None, "error": None}}
     mock_proc = _make_mock_proc([], returncode=1)
     with patch("downloader.subprocess.Popen", return_value=mock_proc):
         download_video("https://youtube.com/watch?v=abc", "err-job", "mp4", str(tmp_path), jobs)
@@ -110,7 +110,7 @@ def test_download_video_sets_status_error_on_nonzero_returncode(tmp_path):
 
 
 def test_download_video_mp3_uses_audio_flags(tmp_path):
-    jobs = {}
+    jobs = {"mp3-job": {"status": "queued", "progress": 0, "filepath": None, "error": None}}
     fake_file = tmp_path / "mp3-job.mp3"
     fake_file.write_bytes(b"fake")
 
