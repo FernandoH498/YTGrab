@@ -1,5 +1,8 @@
+import json
 import pytest
-from downloader import validate_youtube_url, parse_progress_line
+from unittest.mock import MagicMock, patch
+
+from downloader import get_video_info, parse_progress_line, validate_youtube_url
 
 
 def test_validate_standard_watch_url():
@@ -48,11 +51,6 @@ def test_parse_progress_returns_none_for_non_progress_line():
 
 def test_parse_progress_returns_none_for_empty_string():
     assert parse_progress_line("") is None
-
-
-import json
-from unittest.mock import patch, MagicMock
-from downloader import get_video_info
 
 
 def test_get_video_info_returns_title_and_thumbnail():

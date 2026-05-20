@@ -23,6 +23,7 @@ def parse_progress_line(line: str) -> float | None:
 
 
 def get_video_info(url: str) -> dict:
+    """Fetch video title and thumbnail URL from YouTube via yt-dlp."""
     result = subprocess.run(
         ["yt-dlp", "--dump-json", "--no-playlist", url],
         capture_output=True,
