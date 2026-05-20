@@ -73,3 +73,54 @@ def test_get_video_info_raises_with_fallback_message_when_stderr_empty():
     with patch("downloader.subprocess.run", return_value=mock_result):
         with pytest.raises(ValueError, match="Failed to fetch video info"):
             get_video_info("https://youtube.com/watch?v=abc")
+
+
+from downloader import download_video
+
+
+def _make_mock_proc(stdout_lines: list[str], returncode: int = 0):
+    mock_proc = MagicMock()
+    mock_proc.stdout = iter(stdout_lines)
+    mock_proc.returncode = returncode
+    mock_proc.wait.return_value = None
+    return mock_proc
+
+
+def test_download_video_sets_status_done_on_success(tmp_path):
+    jobs = {}
+    lines = [
+        "[download]  50.0% of 10.00MiB\n",
+        "[download] 100% of 10.00MiB\n",
+    ]
+    fake_file = tmp_path / "test-job.mp4"
+    fake_file.write_bytes(b"fake")
+
+    with patch("downloader.subprocess.Popen", return_value=_make_mock_proc(lines)):
+        download_video("https://youtube.com/watch?v=abc", "test-job", "mp4", str(tmp_path), jobs)
+
+    assert jobs["test-job"]["status"] == "done"
+    assert jobs["test-job"]["progress"] == 100
+
+
+def test_download_video_sets_status_error_on_nonzero_returncode(tmp_path):
+    jobs = {}
+    mock_proc = _make_mock_proc([], returncode=1)
+    with patch("downloader.subprocess.Popen", return_value=mock_proc):
+        download_video("https://youtube.com/watch?v=abc", "err-job", "mp4", str(tmp_path), jobs)
+
+    assert jobs["err-job"]["status"] == "error"
+    assert jobs["err-job"]["error"] is not None
+
+
+def test_download_video_mp3_uses_audio_flags(tmp_path):
+    jobs = {}
+    fake_file = tmp_path / "mp3-job.mp3"
+    fake_file.write_bytes(b"fake")
+
+    with patch("downloader.subprocess.Popen", return_value=_make_mock_proc([])) as mock_popen:
+        download_video("https://youtube.com/watch?v=abc", "mp3-job", "mp3", str(tmp_path), jobs)
+
+    cmd = mock_popen.call_args[0][0]
+    assert "--extract-audio" in cmd
+    assert "--audio-format" in cmd
+    assert "mp3" in cmd

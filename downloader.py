@@ -1,6 +1,8 @@
 import re
 import json
 import subprocess
+import glob
+import os
 
 YOUTUBE_REGEX = re.compile(
     r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)[\w-]+"
@@ -40,4 +42,51 @@ def get_video_info(url: str) -> dict:
 
 
 def download_video(url: str, job_id: str, fmt: str, temp_dir: str, jobs: dict) -> None:
-    raise NotImplementedError
+    """Download a YouTube video/audio using yt-dlp, tracking progress in the jobs dict."""
+    out_template = os.path.join(temp_dir, f"{job_id}.%(ext)s")
+
+    if fmt == "mp3":
+        cmd = [
+            "yt-dlp", "--no-playlist", "--newline",
+            "--extract-audio", "--audio-format", "mp3", "--audio-quality", "0",
+            "-o", out_template, url,
+        ]
+    else:
+        cmd = [
+            "yt-dlp", "--no-playlist", "--newline",
+            "--format", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
+            "--merge-output-format", "mp4",
+            "-o", out_template, url,
+        ]
+
+    jobs[job_id] = {"status": "downloading", "progress": 0, "filepath": None, "error": None}
+
+    try:
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
+        for line in proc.stdout:
+            progress = parse_progress_line(line)
+            if progress is not None:
+                jobs[job_id]["progress"] = progress
+        proc.wait()
+
+        if proc.returncode != 0:
+            jobs[job_id]["status"] = "error"
+            jobs[job_id]["error"] = "Download failed. The video may be unavailable or private."
+            return
+
+        pattern = os.path.join(temp_dir, f"{job_id}.*")
+        files = [f for f in glob.glob(pattern) if not f.endswith(".part")]
+        if not files:
+            jobs[job_id]["status"] = "error"
+            jobs[job_id]["error"] = "Output file not found after download."
+            return
+
+        jobs[job_id]["filepath"] = files[0]
+        jobs[job_id]["progress"] = 100
+        jobs[job_id]["status"] = "done"
+
+    except Exception as e:
+        jobs[job_id]["status"] = "error"
+        jobs[job_id]["error"] = str(e)
