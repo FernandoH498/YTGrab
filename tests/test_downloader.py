@@ -48,3 +48,30 @@ def test_parse_progress_returns_none_for_non_progress_line():
 
 def test_parse_progress_returns_none_for_empty_string():
     assert parse_progress_line("") is None
+
+
+import json
+from unittest.mock import patch, MagicMock
+from downloader import get_video_info
+
+
+def test_get_video_info_returns_title_and_thumbnail():
+    mock_data = {"title": "Never Gonna Give You Up", "thumbnail": "https://img.jpg"}
+    mock_result = MagicMock(returncode=0, stdout=json.dumps(mock_data), stderr="")
+    with patch("downloader.subprocess.run", return_value=mock_result):
+        result = get_video_info("https://youtube.com/watch?v=abc")
+    assert result == {"title": "Never Gonna Give You Up", "thumbnail": "https://img.jpg"}
+
+
+def test_get_video_info_raises_on_nonzero_returncode():
+    mock_result = MagicMock(returncode=1, stdout="", stderr="Video unavailable")
+    with patch("downloader.subprocess.run", return_value=mock_result):
+        with pytest.raises(ValueError, match="Video unavailable"):
+            get_video_info("https://youtube.com/watch?v=abc")
+
+
+def test_get_video_info_raises_with_fallback_message_when_stderr_empty():
+    mock_result = MagicMock(returncode=1, stdout="", stderr="")
+    with patch("downloader.subprocess.run", return_value=mock_result):
+        with pytest.raises(ValueError, match="Failed to fetch video info"):
+            get_video_info("https://youtube.com/watch?v=abc")

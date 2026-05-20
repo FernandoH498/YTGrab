@@ -1,4 +1,6 @@
 import re
+import json
+import subprocess
 
 YOUTUBE_REGEX = re.compile(
     r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)[\w-]+"
@@ -21,7 +23,19 @@ def parse_progress_line(line: str) -> float | None:
 
 
 def get_video_info(url: str) -> dict:
-    raise NotImplementedError
+    result = subprocess.run(
+        ["yt-dlp", "--dump-json", "--no-playlist", url],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        raise ValueError(result.stderr.strip() or "Failed to fetch video info")
+    data = json.loads(result.stdout)
+    return {
+        "title": data.get("title", "Unknown"),
+        "thumbnail": data.get("thumbnail", ""),
+    }
 
 
 def download_video(url: str, job_id: str, fmt: str, temp_dir: str, jobs: dict) -> None:
