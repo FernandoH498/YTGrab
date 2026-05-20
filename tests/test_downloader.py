@@ -2,7 +2,7 @@ import json
 import pytest
 from unittest.mock import MagicMock, patch
 
-from downloader import get_video_info, parse_progress_line, validate_youtube_url
+from downloader import download_video, get_video_info, parse_progress_line, validate_youtube_url
 
 
 def test_validate_standard_watch_url():
@@ -73,9 +73,6 @@ def test_get_video_info_raises_with_fallback_message_when_stderr_empty():
     with patch("downloader.subprocess.run", return_value=mock_result):
         with pytest.raises(ValueError, match="Failed to fetch video info"):
             get_video_info("https://youtube.com/watch?v=abc")
-
-
-from downloader import download_video
 
 
 def _make_mock_proc(stdout_lines: list[str], returncode: int = 0):
