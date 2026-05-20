@@ -133,6 +133,7 @@
         }
 
         async function handleSearch() {
+            stopPolling();
             const url = $('url-input').value.trim();
             $('url-error').classList.add('hidden');
             if (!YOUTUBE_RE.test(url)) {
@@ -160,6 +161,7 @@
         }
 
         async function handleDownload(format) {
+            stopPolling();
             const url = $('url-input').value.trim();
             setButtons(true);
             showOnly('progress-card');
@@ -183,13 +185,18 @@
                 try {
                     const res = await fetch(`/api/status/${job_id}`);
                     const data = await res.json();
-                    if (data.status === 'downloading' || data.status === 'queued') {
-                        setProgress(data.progress, 'Baixando...');
+                    if (data.status === 'queued') {
+                        setProgress(data.progress ?? 0, 'Na fila...');
+                    } else if (data.status === 'downloading') {
+                        setProgress(data.progress ?? 0, 'Baixando...');
                     } else if (data.status === 'done') {
                         stopPolling();
                         setProgress(100, 'Concluído! Iniciando download do arquivo...');
-                        window.location.href = `/api/file/${job_id}`;
-                        setTimeout(() => { setButtons(false); showOnly('video-card'); }, 2500);
+                        setTimeout(() => {
+                            window.location.href = `/api/file/${job_id}`;
+                            setButtons(false);
+                            showOnly('video-card');
+                        }, 400);
                     } else if (data.status === 'error') {
                         stopPolling();
                         showError(data.error || 'Ocorreu um erro durante o download.');
