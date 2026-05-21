@@ -95,6 +95,11 @@ def api_file(job_id: str, background_tasks: BackgroundTasks):
     return FileResponse(filepath, filename=os.path.basename(filepath))
 
 
+@app.get("/", include_in_schema=False)
+def serve_index():
+    return FileResponse("static/index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":

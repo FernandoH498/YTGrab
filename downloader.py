@@ -1,5 +1,6 @@
 import re
 import sys
+import shutil
 import json
 import subprocess
 import glob
@@ -9,6 +10,20 @@ import threading
 
 _YTDLP = [sys.executable, "-m", "yt_dlp"]
 
+
+def _find_ffmpeg_dir() -> str | None:
+    exe = shutil.which("ffmpeg")
+    if exe:
+        return os.path.dirname(exe)
+    candidate = r"C:\ffmpeg\ffmpeg-8.1.1-essentials_build\bin"
+    if os.path.exists(os.path.join(candidate, "ffmpeg.exe")):
+        return candidate
+    return None
+
+
+_FFMPEG_DIR = _find_ffmpeg_dir()
+_FFMPEG_ARGS = ["--ffmpeg-location", _FFMPEG_DIR] if _FFMPEG_DIR else []
+
 YOUTUBE_REGEX = re.compile(
     r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)[\w-]+"
 )
@@ -17,12 +32,10 @@ PROGRESS_REGEX = re.compile(r"\[download\]\s+([\d.]+)%")
 
 
 def validate_youtube_url(url: str) -> bool:
-    """Validate if a URL is a YouTube video link (watch, youtu.be, or shorts)."""
     return bool(YOUTUBE_REGEX.match(url))
 
 
 def parse_progress_line(line: str) -> float | None:
-    """Extract download progress percentage from a yt-dlp output line."""
     match = PROGRESS_REGEX.search(line)
     if match:
         return float(match.group(1))
@@ -30,9 +43,8 @@ def parse_progress_line(line: str) -> float | None:
 
 
 def get_video_info(url: str) -> dict:
-    """Fetch video title and thumbnail URL from YouTube via yt-dlp."""
     result = subprocess.run(
-        [*_YTDLP, "--dump-json", "--no-playlist", url],
+        [*_YTDLP, *_FFMPEG_ARGS, "--dump-json", "--no-playlist", url],
         capture_output=True,
         text=True,
         timeout=30,
@@ -47,20 +59,19 @@ def get_video_info(url: str) -> dict:
 
 
 def download_video(url: str, job_id: str, fmt: str, temp_dir: str, jobs: dict, lock: "threading.Lock | None" = None) -> None:
-    """Download a YouTube video/audio using yt-dlp, tracking progress in the jobs dict."""
     _lock = lock or contextlib.nullcontext()
     out_template = os.path.join(temp_dir, f"{job_id}.%(ext)s")
 
     if fmt == "mp3":
         cmd = [
-            *_YTDLP, "--no-playlist", "--newline",
+            *_YTDLP, *_FFMPEG_ARGS, "--no-playlist", "--newline",
             "--extract-audio", "--audio-format", "mp3", "--audio-quality", "0",
             "-o", out_template, url,
         ]
     else:
         cmd = [
-            *_YTDLP, "--no-playlist", "--newline",
-            "--format", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
+            *_YTDLP, *_FFMPEG_ARGS, "--no-playlist", "--newline",
+            "--format", "bestvideo[ext=mp4][height<=720]+bestaudio/best[height<=720][ext=mp4]/best[ext=mp4]",
             "--merge-output-format", "mp4",
             "-o", out_template, url,
         ]
