@@ -1,10 +1,13 @@
 import re
+import sys
 import json
 import subprocess
 import glob
 import os
 import contextlib
 import threading
+
+_YTDLP = [sys.executable, "-m", "yt_dlp"]
 
 YOUTUBE_REGEX = re.compile(
     r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)[\w-]+"
@@ -29,7 +32,7 @@ def parse_progress_line(line: str) -> float | None:
 def get_video_info(url: str) -> dict:
     """Fetch video title and thumbnail URL from YouTube via yt-dlp."""
     result = subprocess.run(
-        ["yt-dlp", "--dump-json", "--no-playlist", url],
+        [*_YTDLP, "--dump-json", "--no-playlist", url],
         capture_output=True,
         text=True,
         timeout=30,
@@ -50,13 +53,13 @@ def download_video(url: str, job_id: str, fmt: str, temp_dir: str, jobs: dict, l
 
     if fmt == "mp3":
         cmd = [
-            "yt-dlp", "--no-playlist", "--newline",
+            *_YTDLP, "--no-playlist", "--newline",
             "--extract-audio", "--audio-format", "mp3", "--audio-quality", "0",
             "-o", out_template, url,
         ]
     else:
         cmd = [
-            "yt-dlp", "--no-playlist", "--newline",
+            *_YTDLP, "--no-playlist", "--newline",
             "--format", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
             "--merge-output-format", "mp4",
             "-o", out_template, url,

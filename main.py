@@ -5,8 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -27,6 +27,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(status_code=500, content={"detail": "Erro interno no servidor. Tente novamente."})
 
 
 class VideoInfoRequest(BaseModel):
