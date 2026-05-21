@@ -22,6 +22,9 @@ jobs_lock = threading.Lock()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    cookies = os.getenv("YOUTUBE_COOKIES")
+    if cookies:
+        Path("cookies.txt").write_text(cookies)
     yield
     executor.shutdown(wait=False)
 

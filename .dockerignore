@@ -1,5 +1,6 @@
 .git/
 .claude/
+cookies.txt
 docs/
 temp/
 __pycache__/

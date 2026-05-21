@@ -23,6 +23,12 @@ def _find_ffmpeg_dir() -> str | None:
 
 _FFMPEG_DIR = _find_ffmpeg_dir()
 _FFMPEG_ARGS = ["--ffmpeg-location", _FFMPEG_DIR] if _FFMPEG_DIR else []
+_JS_RUNTIME_ARGS = ["--js-runtimes", "nodejs"]
+_COOKIES_FILE = "cookies.txt"
+
+
+def _get_cookies_args() -> list[str]:
+    return ["--cookies", _COOKIES_FILE] if os.path.exists(_COOKIES_FILE) else []
 
 YOUTUBE_REGEX = re.compile(
     r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)[\w-]+"
@@ -44,7 +50,7 @@ def parse_progress_line(line: str) -> float | None:
 
 def get_video_info(url: str) -> dict:
     result = subprocess.run(
-        [*_YTDLP, *_FFMPEG_ARGS, "--dump-json", "--no-playlist", url],
+        [*_YTDLP, *_FFMPEG_ARGS, *_JS_RUNTIME_ARGS, *_get_cookies_args(), "--dump-json", "--no-playlist", url],
         capture_output=True,
         text=True,
         timeout=30,
@@ -62,15 +68,16 @@ def download_video(url: str, job_id: str, fmt: str, temp_dir: str, jobs: dict, l
     _lock = lock or contextlib.nullcontext()
     out_template = os.path.join(temp_dir, f"{job_id}.%(ext)s")
 
+    cookies_args = _get_cookies_args()
     if fmt == "mp3":
         cmd = [
-            *_YTDLP, *_FFMPEG_ARGS, "--no-playlist", "--newline",
+            *_YTDLP, *_FFMPEG_ARGS, *_JS_RUNTIME_ARGS, *cookies_args, "--no-playlist", "--newline",
             "--extract-audio", "--audio-format", "mp3", "--audio-quality", "0",
             "-o", out_template, url,
         ]
     else:
         cmd = [
-            *_YTDLP, *_FFMPEG_ARGS, "--no-playlist", "--newline",
+            *_YTDLP, *_FFMPEG_ARGS, *_JS_RUNTIME_ARGS, *cookies_args, "--no-playlist", "--newline",
             "--format", "bestvideo[ext=mp4][height<=720]+bestaudio/best[height<=720][ext=mp4]/best[ext=mp4]",
             "--merge-output-format", "mp4",
             "-o", out_template, url,
