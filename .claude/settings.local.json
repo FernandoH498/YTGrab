@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item *)",
+      "Bash(pip install *)",
+      "Bash(yt-dlp --version)",
+      "Bash(python -c \"import fastapi; print\\('FastAPI version:', fastapi.__version__\\)\")",
+      "Bash(python *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(pytest tests/test_downloader.py -v)",
+      "Bash(pytest tests/test_downloader.py::test_get_video_info_returns_title_and_thumbnail -v)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\fernando_i_harmel\\\\Downloads\\\\Projeto ferramenta de download videos YT\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "PowerShell(head *)",
+      "Bash(ping -n 3 127.0.0.1)",
+      "Bash(curl -s http://localhost:8000/api/status/nonexistent)",
+      "Bash(where yt-dlp *)",
+      "Bash(curl *)",
+      "Bash(taskkill /F /FI \"WINDOWTITLE eq python*\" /T)",
+      "Bash(taskkill /F /IM python.exe /T)",
+      "Bash(ping -n 2 127.0.0.1)",
+      "PowerShell(Get-Process *)",
+      "Bash(ping -n 4 127.0.0.1)",
+      "Bash(where ffmpeg *)",
+      "Bash(ffmpeg -version)",
+      "PowerShell(Expand-Archive *)",
+      "Bash(wmic logicaldisk *)",
+      "PowerShell(Get-WmiObject *)",
+      "PowerShell(Join-Path *)",
+      "PowerShell(Get-Item *)",
+      "PowerShell(Remove-Item *)",
+      "Bash(PATH=__TRACKED_VAR__:/c/ffmpeg/ffmpeg-8.1.1-essentials_build/bin python main.py)"
+    ]
+  }
+}
