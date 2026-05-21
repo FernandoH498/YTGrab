@@ -22,9 +22,8 @@ jobs_lock = threading.Lock()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    cookies = os.getenv("YOUTUBE_COOKIES")
+    cookies = os.getenv("YOUTUBE_COOKIES", "").strip()
     if cookies:
-        # Railway may deliver newlines as literal \n — normalize both cases
         cookies = cookies.replace("\\n", "\n")
         Path("cookies.txt").write_text(cookies, newline="\n")
     yield
