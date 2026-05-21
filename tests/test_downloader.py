@@ -99,6 +99,23 @@ def test_download_video_sets_status_done_on_success(tmp_path):
     assert jobs["test-job"]["progress"] == 100
 
 
+def test_download_video_tracks_progress(tmp_path):
+    jobs = {"track-job": {"status": "queued", "progress": 0, "filepath": None, "error": None}}
+    lines = [
+        "[download]  25.0% of 10.00MiB\n",
+        "[download]  75.0% of 10.00MiB\n",
+        "[download] 100% of 10.00MiB\n",
+    ]
+    fake_file = tmp_path / "track-job.mp4"
+    fake_file.write_bytes(b"fake")
+
+    with patch("downloader.subprocess.Popen", return_value=_make_mock_proc(lines)):
+        download_video("https://youtube.com/watch?v=abc", "track-job", "mp4", str(tmp_path), jobs)
+
+    assert jobs["track-job"]["progress"] == 100
+    assert jobs["track-job"]["status"] == "done"
+
+
 def test_download_video_sets_status_error_on_nonzero_returncode(tmp_path):
     jobs = {"err-job": {"status": "queued", "progress": 0, "filepath": None, "error": None}}
     mock_proc = _make_mock_proc([], returncode=1)
