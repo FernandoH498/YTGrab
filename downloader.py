@@ -24,7 +24,7 @@ def _find_ffmpeg_dir() -> str | None:
 _FFMPEG_DIR = _find_ffmpeg_dir()
 _FFMPEG_ARGS = ["--ffmpeg-location", _FFMPEG_DIR] if _FFMPEG_DIR else []
 _JS_RUNTIME_ARGS = ["--js-runtimes", "node"]
-_EXTRACTOR_ARGS = ["--extractor-args", "youtube:player_client=android,web"]
+_EXTRACTOR_ARGS = ["--extractor-args", "youtube:player_client=mweb,android"]
 _COOKIES_FILE = "cookies.txt"
 
 
