@@ -26,19 +26,8 @@ _FFMPEG_ARGS = ["--ffmpeg-location", _FFMPEG_DIR] if _FFMPEG_DIR else []
 _JS_RUNTIME_ARGS = ["--js-runtimes", "node"]
 _EXTRACTOR_ARGS = ["--extractor-args", "youtube:player_client=mweb,android"]
 _COOKIES_FILE = "cookies.txt"
-_CACHE_DIR = "/app/.yt-dlp-cache"
-_CACHE_ARGS = ["--cache-dir", _CACHE_DIR]
-
-
 def _get_cookies_args() -> list[str]:
     return ["--cookies", _COOKIES_FILE] if os.path.exists(_COOKIES_FILE) else []
-
-
-def _get_oauth2_args() -> list[str]:
-    oauth2_dir = os.path.join(_CACHE_DIR, "youtube-oauth2")
-    if os.path.isdir(oauth2_dir) and glob.glob(os.path.join(oauth2_dir, "*.json")):
-        return ["--username", "oauth2", "--password", ""]
-    return []
 
 YOUTUBE_REGEX = re.compile(
     r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)[\w-]+"
@@ -60,7 +49,7 @@ def parse_progress_line(line: str) -> float | None:
 
 def get_video_info(url: str) -> dict:
     result = subprocess.run(
-        [*_YTDLP, *_CACHE_ARGS, *_FFMPEG_ARGS, *_JS_RUNTIME_ARGS, *_EXTRACTOR_ARGS, *_get_oauth2_args(), *_get_cookies_args(), "--dump-json", "--no-playlist", url],
+        [*_YTDLP, *_FFMPEG_ARGS, *_JS_RUNTIME_ARGS, *_EXTRACTOR_ARGS, *_get_cookies_args(), "--dump-json", "--no-playlist", url],
         capture_output=True,
         text=True,
         timeout=30,
@@ -78,16 +67,16 @@ def download_video(url: str, job_id: str, fmt: str, temp_dir: str, jobs: dict, l
     _lock = lock or contextlib.nullcontext()
     out_template = os.path.join(temp_dir, f"{job_id}.%(ext)s")
 
-    auth_args = [*_get_oauth2_args(), *_get_cookies_args()]
+    cookies_args = _get_cookies_args()
     if fmt == "mp3":
         cmd = [
-            *_YTDLP, *_CACHE_ARGS, *_FFMPEG_ARGS, *_JS_RUNTIME_ARGS, *_EXTRACTOR_ARGS, *auth_args, "--no-playlist", "--newline",
+            *_YTDLP, *_FFMPEG_ARGS, *_JS_RUNTIME_ARGS, *_EXTRACTOR_ARGS, *cookies_args, "--no-playlist", "--newline",
             "--extract-audio", "--audio-format", "mp3", "--audio-quality", "0",
             "-o", out_template, url,
         ]
     else:
         cmd = [
-            *_YTDLP, *_CACHE_ARGS, *_FFMPEG_ARGS, *_JS_RUNTIME_ARGS, *_EXTRACTOR_ARGS, *auth_args, "--no-playlist", "--newline",
+            *_YTDLP, *_FFMPEG_ARGS, *_JS_RUNTIME_ARGS, *_EXTRACTOR_ARGS, *cookies_args, "--no-playlist", "--newline",
             "--format", "bestvideo[ext=mp4][height<=720]+bestaudio/best[height<=720][ext=mp4]/best[ext=mp4]",
             "--merge-output-format", "mp4",
             "-o", out_template, url,

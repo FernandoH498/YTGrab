@@ -1,4 +1,3 @@
-import json
 import os
 import uuid
 import threading
@@ -21,27 +20,12 @@ jobs: dict = {}
 jobs_lock = threading.Lock()
 
 
-_OAUTH2_CACHE_DIR = Path("/app/.yt-dlp-cache/youtube-oauth2")
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    oauth2_raw = os.getenv("YOUTUBE_OAUTH2_TOKEN", "").strip()
-    if oauth2_raw:
-        try:
-            data = json.loads(oauth2_raw)
-            _OAUTH2_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            (_OAUTH2_CACHE_DIR / data["key"]).write_text(
-                json.dumps(data["token"]), encoding="utf-8"
-            )
-        except (json.JSONDecodeError, KeyError):
-            pass
-
     cookies = os.getenv("YOUTUBE_COOKIES", "").strip()
     if cookies:
         cookies = cookies.replace("\\n", "\n")
         Path("cookies.txt").write_text(cookies, newline="\n")
-
     yield
     executor.shutdown(wait=False)
 
